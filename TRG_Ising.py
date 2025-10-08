@@ -115,6 +115,27 @@ try:
 except:
     print("(TRG) Fail!")
 
+# For a block
+# AB
+# CD 
+# init: 
+# ··········🄲·🄳··············🄲·🄳·············🄲·🄳··············🄲·🄳············
+# ··········🄰·🄱··············🄰·🄱·············🄰·🄱··············🄰·🄱············
+# ·········╱·····╲···········╱·····╲·········╱·····╲············╱·····╲···········
+# ·······🄰·······🄱········🄰·······🄱·······🄰·······🄱·······🄰·······🄱··········
+# ╲·····╱···········╲·····╱··········╲·····╱···········╲·····╱···········╲········
+# ·🄱·🄰··············🄱·🄰··············🄱···············🄱·🄰·············🄱·🄰····
+# ·🄳·🄲··············🄳·🄲··············🄳···············🄳·🄲·············🄳·🄲····
+# ╱·····╲···········╱·····╲···········╱·····╲··········╱·····╲···········╱·····╲··
+# ·······🄲·······🄳········🄲·······🄳·······🄲·······🄳·······🄲·······🄳··········
+# ·········╲·····╱···········╲·····╱···········╲·····╱··········╲·····╱···········
+# ··········🄲·🄳··············🄲·🄳·············🄲·🄳·············🄲·🄳·············
+# ··········🄰·🄱··············🄰·🄱·············🄰·🄱·············🄰·🄱·············
+
+
+
+
+
 # SVD
 print("(TRG) SVD")
 # ·······y_i·················y_i·································y_i··············
@@ -137,40 +158,44 @@ print("(TRG) SVD")
 print("(TRG) T-->UL @ DR")
 T.print_diagram()
 S , U , Vdag = cytnx.linalg.Svd(T)
-U.print_diagram()
-Vdag.print_diagram()
-S.set_name("S")
-U.set_name("U")
-Vdag.set_name("Vdag")
-S.print_diagram()
-print(S)
 S_sqrt = cytnx.linalg.Pow(S,0.5).set_name("S_sqrt")
-S_sqrt.print_diagram()
-print(S_sqrt)
 UL = cytnx.Contract(U, S_sqrt).set_name("UL").relabel(["y_i","x_i","UL_o"])
-UL.print_diagram()
 DR = cytnx.Contract(S_sqrt, Vdag).set_name("DR").relabel(["DR_i","x_o","y_o"])
-DR.print_diagram()
+
+def T_to_UL_DR(T):
+    S , U , Vdag = cytnx.linalg.Svd(T)
+    S_sqrt = cytnx.linalg.Pow(S,0.5).set_name("S_sqrt")
+    S_sqrt.print_diagram()
+    UL = cytnx.Contract(U, S_sqrt).set_name("UL").relabel(["y_i","x_i","UL_o"])
+    DR = cytnx.Contract(S_sqrt, Vdag).set_name("DR").relabel(["DR_i","x_o","y_o"])
+    return UL, DR
+
+T_UL, T_DR = T_to_UL_DR(T)
+print((T_UL-UL).Norm())
+print((T_DR-DR).Norm())
 
 # T-->DL @ UR
 print("(TRG) T-->DL @ UR")
 T.permute(["x_i","y_o","y_i","x_o"]).print_diagram()
 S , U , Vdag = cytnx.linalg.Svd(T.permute(["x_i","y_o","y_i","x_o"]))
-U.print_diagram()
-Vdag.print_diagram()
-S.set_name("S")
-U.set_name("U")
-Vdag.set_name("Vdag")
-S.print_diagram()
-print(S)
 S_sqrt = cytnx.linalg.Pow(S,0.5).set_name("S_sqrt")
-S_sqrt.print_diagram()
-
-
 DL = cytnx.Contract(U, S_sqrt).set_name("DL").relabel(["x_i","y_o","DL_o"])
-DL.print_diagram()
 UR = cytnx.Contract(S_sqrt, Vdag).set_name("UR").relabel(["UR_i","y_i","x_o"])
-UR.print_diagram()
+
+def T_to_DL_UR(T):
+    T.permute(["x_i","y_o","y_i","x_o"]).print_diagram()
+    S , U , Vdag = cytnx.linalg.Svd(T.permute(["x_i","y_o","y_i","x_o"]))
+    S_sqrt = cytnx.linalg.Pow(S,0.5).set_name("S_sqrt")
+    DL = cytnx.Contract(U, S_sqrt).set_name("DL").relabel(["x_i","y_o","DL_o"])
+    UR = cytnx.Contract(S_sqrt, Vdag).set_name("UR").relabel(["UR_i","y_i","x_o"])
+    return DL, UR
+    
+
+T_DL, T_UR = T_to_DL_UR(T)
+print((T_DL-DL).Norm())
+print((T_UR-UR).Norm())
+
+
 
 # ·······y_i···············y_i····················································
 # ········│·················│·····················································
@@ -224,41 +249,41 @@ UR.print_diagram()
 # ·······y_o································y_o···································
 
 
-net = cytnx.Network()
-net.FromString(["DR: DR_i, xoxi_u, yoyi_l", \
-                "DL: DL_o, xoxi_u, yoyi_r", \
-                "UR: UR_i, xoxi_d, yoyi_l", \
-                "UL: UL_o, xoxi_d, yoyi_r", \
-                "TOUT: DR_i, UR_i, DL_o, UL_o"])
-print(net)
-# net.PutUniTensor("DR", DR)
-net.PutUniTensor("DR", DR, ["DR_i","x_o","y_o"])
-net.PutUniTensor("DL", DL, ["DL_o","x_i","y_o"])
-net.PutUniTensor("UR", UR, ["UR_i","x_o","y_i"])
-net.PutUniTensor("UL", UL, ["UL_o","x_i","y_i"])
-print(net)
-Tout1 = net.Launch()
-Tout1.print_diagram()
+# net = cytnx.Network()
+# net.FromString(["DR: DR_i, xoxi_u, yoyi_l", \
+#                 "DL: DL_o, xoxi_u, yoyi_r", \
+#                 "UR: UR_i, xoxi_d, yoyi_l", \
+#                 "UL: UL_o, xoxi_d, yoyi_r", \
+#                 "TOUT: DR_i, UR_i, DL_o, UL_o"])
+# print(net)
+# # net.PutUniTensor("DR", DR)
+# net.PutUniTensor("DR", DR, ["DR_i","x_o","y_o"])
+# net.PutUniTensor("DL", DL, ["DL_o","x_i","y_o"])
+# net.PutUniTensor("UR", UR, ["UR_i","x_o","y_i"])
+# net.PutUniTensor("UL", UL, ["UL_o","x_i","y_i"])
+# print(net)
+# Tout1 = net.Launch()
+# Tout1.print_diagram()
 
-net = cytnx.Network()
-net.FromString(["DR: DR_i, DR_xo-DL_xi, DR_yo-UR_yi", \
-                "DL: DL_o, DR_xo-DL_xi, DL_yo-UL_yi", \
-                "UR: UR_i, UR_xo-UL_xi, DR_yo-UR_yi", \
-                "UL: UL_o, UR_xo-UL_xi, DL_yo-UL_yi", \
-                "TOUT: DR_i, UR_i, DL_o, UL_o"])
-print(net)
-# net.PutUniTensor("DR", DR)
-net.PutUniTensor("DR", DR, ["DR_i","x_o","y_o"])
-net.PutUniTensor("DL", DL, ["DL_o","x_i","y_o"])
-net.PutUniTensor("UR", UR, ["UR_i","x_o","y_i"])
-net.PutUniTensor("UL", UL, ["UL_o","x_i","y_i"])
-print(net)
-Tout2 = net.Launch()
-Tout2.print_diagram()
+# net = cytnx.Network()
+# net.FromString(["DR: DR_i, DR_xo-DL_xi, DR_yo-UR_yi", \
+#                 "DL: DL_o, DR_xo-DL_xi, DL_yo-UL_yi", \
+#                 "UR: UR_i, UR_xo-UL_xi, DR_yo-UR_yi", \
+#                 "UL: UL_o, UR_xo-UL_xi, DL_yo-UL_yi", \
+#                 "TOUT: DR_i, UR_i, DL_o, UL_o"])
+# print(net)
+# # net.PutUniTensor("DR", DR)
+# net.PutUniTensor("DR", DR, ["DR_i","x_o","y_o"])
+# net.PutUniTensor("DL", DL, ["DL_o","x_i","y_o"])
+# net.PutUniTensor("UR", UR, ["UR_i","x_o","y_i"])
+# net.PutUniTensor("UL", UL, ["UL_o","x_i","y_i"])
+# print(net)
+# Tout2 = net.Launch()
+# Tout2.print_diagram()
 
-diff = Tout1-Tout2
-print(diff.Norm())
-print(type(diff))
+# diff = Tout1-Tout2
+# print(diff.Norm())
+# print(type(diff))
 
 # Main
 # if __name__ == "__main__":
