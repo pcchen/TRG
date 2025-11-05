@@ -143,7 +143,8 @@ matrix_view(T_arrow, 2)
 # exit()
 
 # Contraction of a 2x2 block
-#     A3_y_o-A1_y_1                      A4_y_o-A2_y_i
+diag="""
+#     A3_y_o-A1_y_i                      A4_y_o-A2_y_i
 #     ┌─────┘                    ┌─────┘
 #     │ ┏━━━╳━━┓                 │ ┏━━━╳━━┓
 #     └─┨d     ┃                 └─┨d     ┃
@@ -158,6 +159,8 @@ matrix_view(T_arrow, 2)
 #       ┗━━━━━━┛ │                 ┗━━━━━━┛ │
 #          ┌─────┘                    ┌─────┘
 #    A3_y_o-A1_y_1                  A4_y_o-A2_y_i
+"""
+print(diag)
 
 print("(TRG) Contraction of a 2x2 block")
 print("(TRG) Puting T")
@@ -231,6 +234,57 @@ res = Ei_kmax(L, temp, num_collect)
 print(res)
 # print(np.exp(-res))
 
+
+# exit()
+
+
+# TTTT --> T
+diag="""
+#             A1_y_i                     A2_y_i
+#          ┌─────┘                    ┌─────┘
+#          │ ┏━━━╳━━┓                 │ ┏━━━╳━━┓
+#          └─┨d     ┃                 └─┨d     ┃
+#  A1_x_i────┨d A1 d┠───A1_x_o-A2_x_i───┨d A2 d┠───A2_x_o
+#            ┃     d┠───┐               ┃     d┠──┐
+#            ┗━━━━━━┛   │               ┗━━━━━━┛  │
+#       ┌─A1_y_o-A3_y_i─┘           ┌A2_y_o-A4_y_i┘
+#       │    ┏━━━╳━━┓               │   ┏━━━╳━━┓
+#       └────┨d     ┃               └───┨d     ┃
+#  A3_x_i────┨d A3 d┠───A3_x_o-A4_x_i───┨d A4 d┠───A4_x_o
+#            ┃     d┠─┐                 ┃     d┠─┐
+#            ┗━━━━━━┛ │                 ┗━━━━━━┛ │
+#               ┌─────┘                    ┌─────┘
+#            A3_y_o                     A4_y_o
+"""
+print(diag)
+
+print("(TRG) Contraction of a 2x2 block")
+print("(TRG) Puting T")
+net = cytnx.Network()
+net.FromString(["A1: A1_x_i, A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
+                "A2: A1_x_o-A2_x_i, A2_y_i, A2_x_o, A2_y_o-A4_y_i", \
+                "A3: A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o", \
+                "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o, A4_y_o", \
+                "TOUT: A1_x_i, A1_y_i, A2_y_i, A3_x_i, A2_x_o, A3_y_o, A4_x_o, A4_y_o"])
+print(net)
+net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
+net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
+net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
+net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
+net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
+print(net)
+Tout1 = net.Launch().set_name("TTTT")
+Tout1.print_diagram()
+TM = Tout1.Trace("A1_y_i","A3_y_o").Trace("A2_y_i","A4_y_o").set_name("TM")
+TM.print_diagram()
+
+
+matrix_view(TM, 2)
+exp_Ei, eigenvectors = cytnx.linalg.Eigh(TM)
+exp_Ei = exp_Ei.get_block().numpy()[::-1]
+Ei = -np.log(exp_Ei)
+# print(exp_Ei)
+print(Ei/2)
 
 exit()
 
