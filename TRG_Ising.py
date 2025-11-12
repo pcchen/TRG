@@ -144,59 +144,124 @@ matrix_view(T_arrow, 2)
 
 # Contraction of a 2x2 block
 diag="""
-#     A3_y_o-A1_y_i                      A4_y_o-A2_y_i
-#     ┌─────┘                    ┌─────┘
-#     │ ┏━━━╳━━┓                 │ ┏━━━╳━━┓
-#     └─┨d     ┃                 └─┨d     ┃
-#  2────┨d A1 d┠───A1_x_o-A2_x_i───┨d A2 d┠───A2_x_o-A1_x_i
-#       ┃     d┠───┐               ┃     d┠──┐
-#       ┗━━━━━━┛   │               ┗━━━━━━┛  │
-#  ┌─A1_y_o-A3_y_i─┘           ┌A2_y_o-A4_y_i┘
-#  │    ┏━━━╳━━┓               │   ┏━━━╳━━┓
-#  └────┨d     ┃               └───┨d     ┃
-#  3────┨d A3 d┠───A3_x_o-A4_x_i───┨d A4 d┠───A4_x_o-A3_x_i
-#       ┃     d┠─┐                 ┃     d┠─┐
-#       ┗━━━━━━┛ │                 ┗━━━━━━┛ │
-#          ┌─────┘                    ┌─────┘
-#    A3_y_o-A1_y_1                  A4_y_o-A2_y_i
+#                A3_y_o-A1_y_i                      A4_y_o-A2_y_i
+#                ┌─────┘                    ┌─────┘
+#                │ ┏━━━╳━━┓                 │ ┏━━━╳━━┓
+#                └─┨d     ┃                 └─┨d     ┃
+# A2_x_o-A1_x_i────┨d A1 d┠───A1_x_o-A2_x_i───┨d A2 d┠───A2_x_o-A1_x_i
+#                  ┃     d┠───┐               ┃     d┠──┐
+#                  ┗━━━━━━┛   │               ┗━━━━━━┛  │
+#             ┌─A1_y_o-A3_y_i─┘           ┌A2_y_o-A4_y_i┘
+#             │    ┏━━━╳━━┓               │   ┏━━━╳━━┓
+#             └────┨d     ┃               └───┨d     ┃
+# A4_x_o-A3_x_i────┨d A3 d┠───A3_x_o-A4_x_i───┨d A4 d┠───A4_x_o-A3_x_i
+#                  ┃     d┠─┐                 ┃     d┠─┐
+#                  ┗━━━━━━┛ │                 ┗━━━━━━┛ │
+#                     ┌─────┘                    ┌─────┘
+#               A3_y_o-A1_y_1                  A4_y_o-A2_y_i
 """
 print(diag)
 
+
+from extension import *
+
+def TTTT_2_Z_net(T):
+    tensors=[
+        ("A1",["x_i","y_i","x_o","y_o"]),
+        ("A2",["x_i","y_i","x_o","y_o"]),
+        ("A3",["x_i","y_i","x_o","y_o"]),
+        ("A4",["x_i","y_i","x_o","y_o"]),
+    ]
+
+    contractions=[
+        ("A1","x_o","A2","x_i"),("A2","x_o","A1","x_i"),
+        ("A3","x_o","A4","x_i"),("A4","x_o","A3","x_i"),
+        ("A1","y_o","A3","y_i"),("A2","y_o","A4","y_i"),
+        ("A3","y_o","A1","y_i"),("A4","y_o","A2","y_i"),
+    ]
+
+    net = conc(tensors=tensors, contractions=contractions)
+    net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
+    net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
+    net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
+    net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
+    # print(net)
+    Tout = net.Launch()
+    # Tout1.print_diagram()
+    # print(Tout1)
+    return Tout
+        
 print("(TRG) Contraction of a 2x2 block")
 print("(TRG) Puting T")
-net = cytnx.Network()
-net.FromString(["A1: A2_x_o-A1_x_i, A3_y_o-A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
-                "A2: A1_x_o-A2_x_i, A4_y_o-A2_y_i, A2_x_o-A1_x_i, A2_y_o-A4_y_i", \
-                "A3: A4_x_o-A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o-A1_y_i", \
-                "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o-A3_x_i, A4_y_o-A2_y_i", \
-                "TOUT: "])
-print(net)
-net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
-print(net)
-Tout1 = net.Launch()
-Tout1.print_diagram()
-print(Tout1)
+Tout = TTTT_2_Z_net(T)
+# Tout.print_diagram()
+print(Tout)
 # exit()
 
+
+# def TTTT_2_Z(T):
+#     # print("(TRG) Contraction of a 2x2 block")
+#     # print("(TRG) Puting T")
+#     net = cytnx.Network()
+#     net.FromString(["A1: A2_x_o-A1_x_i, A3_y_o-A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
+#                     "A2: A1_x_o-A2_x_i, A4_y_o-A2_y_i, A2_x_o-A1_x_i, A2_y_o-A4_y_i", \
+#                     "A3: A4_x_o-A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o-A1_y_i", \
+#                     "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o-A3_x_i, A4_y_o-A2_y_i", \
+#                     "TOUT: "])
+#     # print(net)
+#     net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
+#     net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
+#     net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
+#     net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
+#     # print(net)
+#     Tout = net.Launch()
+#     # Tout1.print_diagram()
+#     # print(Tout1)
+#     return Tout
+
+# Tout = TTTT_2_Z(T)
+# Tout.print_diagram()
+# print(Tout)
+# exit()
+# print("(TRG) Contraction of a 2x2 block")
+# print("(TRG) Puting T")
+# net = cytnx.Network()
+# net.FromString(["A1: A2_x_o-A1_x_i, A3_y_o-A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
+#                 "A2: A1_x_o-A2_x_i, A4_y_o-A2_y_i, A2_x_o-A1_x_i, A2_y_o-A4_y_i", \
+#                 "A3: A4_x_o-A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o-A1_y_i", \
+#                 "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o-A3_x_i, A4_y_o-A2_y_i", \
+#                 "TOUT: "])
+# # print(net)
+# net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
+# net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
+# net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
+# net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
+# # print(net)
+# Tout1 = net.Launch()
+# # Tout1.print_diagram()
+# print(Tout1)
+# # exit()
+
 print("(TRG) Puting T_arrow")
-net = cytnx.Network()
-net.FromString(["A1: A2_x_o-A1_x_i, A3_y_o-A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
-                "A2: A1_x_o-A2_x_i, A4_y_o-A2_y_i, A2_x_o-A1_x_i, A2_y_o-A4_y_i", \
-                "A3: A4_x_o-A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o-A1_y_i", \
-                "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o-A3_x_i, A4_y_o-A2_y_i", \
-                "TOUT: "])
-print(net)
-net.PutUniTensor("A1", T_arrow, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A2", T_arrow, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A3", T_arrow, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A4", T_arrow, ["x_i","y_i","x_o","y_o"])
-print(net)
-Tout1 = net.Launch()
-Tout1.print_diagram()
-print(Tout1)
+Tout = TTTT_2_Z_net(T_arrow)
+# Tout.print_diagram()
+print(Tout)
+
+# net = cytnx.Network()
+# net.FromString(["A1: A2_x_o-A1_x_i, A3_y_o-A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
+#                 "A2: A1_x_o-A2_x_i, A4_y_o-A2_y_i, A2_x_o-A1_x_i, A2_y_o-A4_y_i", \
+#                 "A3: A4_x_o-A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o-A1_y_i", \
+#                 "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o-A3_x_i, A4_y_o-A2_y_i", \
+#                 "TOUT: "])
+# # print(net)
+# net.PutUniTensor("A1", T_arrow, ["x_i","y_i","x_o","y_o"])
+# net.PutUniTensor("A2", T_arrow, ["x_i","y_i","x_o","y_o"])
+# net.PutUniTensor("A3", T_arrow, ["x_i","y_i","x_o","y_o"])
+# net.PutUniTensor("A4", T_arrow, ["x_i","y_i","x_o","y_o"])
+# # print(net)
+# Tout1 = net.Launch()
+# # Tout1.print_diagram()
+# print(Tout1)
 
 # exit()
 
@@ -235,7 +300,7 @@ print(res)
 # print(np.exp(-res))
 
 
-# exit()
+exit()
 
 
 # TTTT --> T
@@ -258,6 +323,29 @@ diag="""
 """
 print(diag)
 
+def TTTT_2_T(T):
+    net = cytnx.Network()
+    net.FromString(["A1: A1_x_i, A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
+                    "A2: A1_x_o-A2_x_i, A2_y_i, A2_x_o, A2_y_o-A4_y_i", \
+                    "A3: A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o", \
+                    "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o, A4_y_o", \
+                    "TOUT: A1_x_i, A1_y_i, A2_y_i, A3_x_i, A2_x_o, A3_y_o, A4_x_o, A4_y_o"])
+    print(net)
+    net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
+    net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
+    net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
+    net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
+    net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
+    print(net)
+    Tout = net.Launch().set_name("TTTT")
+    # Tout.print_diagram()
+    return Tout
+
+
+Tout = TTTT_2_T(T)
+Tout.print_diagram()
+# print(Tout)
+# exit()
 print("(TRG) Contraction of a 2x2 block")
 print("(TRG) Puting T")
 net = cytnx.Network()
@@ -275,6 +363,9 @@ net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
 print(net)
 Tout1 = net.Launch().set_name("TTTT")
 Tout1.print_diagram()
+
+exit()
+
 TM = Tout1.Trace("A1_y_i","A3_y_o").Trace("A2_y_i","A4_y_o").set_name("TM")
 TM.print_diagram()
 
