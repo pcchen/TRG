@@ -10,7 +10,9 @@ Ref:
 """
 import cytnx
 import numpy as np
-import itertools 
+import itertools
+from extension import *
+import scipy.linalg as spl
 
 def matrix_view(T, rowrank=-1):
     """View a UniTensor as a matrix (currently only non-symmetric UniTensor)
@@ -32,38 +34,38 @@ def matrix_view(T, rowrank=-1):
         print("Nblocks !=1")
 
 # zero external field
-print("#"*80)
-print("(TRG) 2D Ising model, zero external field")
-print("#"*80)
+print(">"*80)
+print(">>>>>(TRG) 2D Ising model, zero external field")
+print(">"*80)
 temp = 1.
-print("(TRG) Constructing W")
+# print("(TRG) Constructing W")
 W = np.array([[+np.exp(+1/temp), +np.exp(-1/temp)],
               [+np.exp(-1/temp), +np.exp(+1/temp)]])
 
-print("(TRG) Using np.linalg.eigh")
+# print("(TRG) Using np.linalg.eigh")
 eigenvalues, eigenvectors = np.linalg.eigh(W)
-print("(TRG) eigenvalues=\n", eigenvalues)
-print("(TRG) eigenvectors=\n", eigenvectors)
+# print("(TRG) eigenvalues=\n", eigenvalues)
+# print("(TRG) eigenvectors=\n", eigenvectors)
 
-print("(TRG) Using np.linalg.eigh")
+# print("(TRG) Using np.linalg.eigh")
 U, S, Vh = np.linalg.svd(W)
-print("(TRG) U=\n", U)
-print("(TRG) S=\n", S)
-print("(TRG) Vh=\n", Vh)
+# print("(TRG) U=\n", U)
+# print("(TRG) S=\n", S)
+# print("(TRG) Vh=\n", Vh)
 
-print("(TRG) Constructing M")
+# print("(TRG) Constructing M")
 M = np.array([[+np.sqrt(np.cosh(+1/temp)), +np.sqrt(np.sinh(+1/temp))],
               [+np.sqrt(np.cosh(+1/temp)), -np.sqrt(np.sinh(+1/temp))]])
 
-print("(TRG) Checking if W-M@Md=0")
-print("(TRG)", np.linalg.norm(W-M@M.transpose()))
+# print("(TRG) Checking if W-M@Md=0")
+# print("(TRG)", np.linalg.norm(W-M@M.transpose()))
 
 # T xi, yi, xo, yo
 # use UniTensor.at() with labels to set values
-print("(TRG) Constructing T")
+# print("(TRG) Constructing T")
 bd = cytnx.Bond(2)
 T = cytnx.UniTensor([bd,bd,bd,bd], rowrank=4).set_name("T").relabel(["x_i","y_i","x_o","y_o"])
-T.print_diagram()
+# T.print_diagram()
 
 for x_i, y_i, x_o, y_o in itertools.product([0, 1], repeat=4):
     # print(x_i, y_i, x_o, y_o)
@@ -105,41 +107,47 @@ trT.print_diagram()
 trT = trT[0].item()
 print("(TRG) trT={}".format(trT))
 
-trT = T.clone().Trace_("x_i","y_i").Trace_("x_o","y_o").set_name("trT")
-trT.print_diagram()
-trT = trT[0].item()
-print("(TRG) trT={}".format(trT))
+print(np.log(trT))
+T = T/trT
+print(T)
 
-# T_arrow is a rank-4 UniTensor with labels x_i, y_i, x_o, y_o
-print("(TRG) Constructing T_arrow")
-bd_i = cytnx.Bond(2, cytnx.BD_IN)
-bd_o = cytnx.Bond(2, cytnx.BD_OUT)
-T_arrow = cytnx.UniTensor([bd_i,bd_i,bd_o,bd_o], rowrank=4).set_name("T_arrow").relabel(["x_i","y_i","x_o","y_o"])
-T_arrow.print_diagram()
+# exit()
 
-print("(TRG) Constructing T_arrow")
+# trT = T.clone().Trace_("x_i","y_i").Trace_("x_o","y_o").set_name("trT")
+# trT.print_diagram()
+# trT = trT[0].item()
+# print("(TRG) trT={}".format(trT))
 
-for x_i, y_i, x_o, y_o in itertools.product([0, 1], repeat=4):
-    T_arrow.at(["x_i","y_i","x_o","y_o"], [x_i,y_i,x_o,y_o]).value = M[0,y_i]*M[0,x_i]*M[0,x_o]*M[0,y_o] + M[1,y_i]*M[1,x_i]*M[1,x_o]*M[1,y_o]
+# # T_arrow is a rank-4 UniTensor with labels x_i, y_i, x_o, y_o
+# print("(TRG) Constructing T_arrow")
+# bd_i = cytnx.Bond(2, cytnx.BD_IN)
+# bd_o = cytnx.Bond(2, cytnx.BD_OUT)
+# T_arrow = cytnx.UniTensor([bd_i,bd_i,bd_o,bd_o], rowrank=4).set_name("T_arrow").relabel(["x_i","y_i","x_o","y_o"])
+# T_arrow.print_diagram()
 
-matrix_view(T_arrow)
+# print("(TRG) Constructing T_arrow")
 
-# this one works
-trT = T_arrow.clone().Trace_("x_i","x_o").Trace_("y_i","y_o").set_name("trT")
-trT.print_diagram()
-trT = trT[0].item()
-print("(TRG) trT={}".format(trT))
-# this one should fail du to the direction of the bond
-try:
-    trT = T_arrow.clone().Trace_("x_i","y_i").Trace_("x_o","y_o").set_name("trT")
-    trT.print_diagram()
-    trT = trT[0].item()
-    print("(TRG) trT={}".format(trT))
-except:
-    print("(TRG) Fail!")
+# for x_i, y_i, x_o, y_o in itertools.product([0, 1], repeat=4):
+#     T_arrow.at(["x_i","y_i","x_o","y_o"], [x_i,y_i,x_o,y_o]).value = M[0,y_i]*M[0,x_i]*M[0,x_o]*M[0,y_o] + M[1,y_i]*M[1,x_i]*M[1,x_o]*M[1,y_o]
+
+# matrix_view(T_arrow)
+
+# # this one works
+# trT = T_arrow.clone().Trace_("x_i","x_o").Trace_("y_i","y_o").set_name("trT")
+# trT.print_diagram()
+# trT = trT[0].item()
+# print("(TRG) trT={}".format(trT))
+# # this one should fail du to the direction of the bond
+# try:
+#     trT = T_arrow.clone().Trace_("x_i","y_i").Trace_("x_o","y_o").set_name("trT")
+#     trT.print_diagram()
+#     trT = trT[0].item()
+#     print("(TRG) trT={}".format(trT))
+# except:
+#     print("(TRG) Fail!")
 
 
-matrix_view(T_arrow, 2)
+# matrix_view(T_arrow, 2)
 # exit()
 
 # Contraction of a 2x2 block
@@ -161,9 +169,9 @@ diag="""
 #               A3_y_o-A1_y_1                  A4_y_o-A2_y_i
 """
 print(diag)
-
-
-from extension import *
+print(">"*80)
+print(">>>>>> TTTT --> Z[2,2]")
+print(">"*80)
 
 def TTTT_2_Z_net(T):
     tensors=[
@@ -196,72 +204,17 @@ print("(TRG) Puting T")
 Tout = TTTT_2_Z_net(T)
 # Tout.print_diagram()
 print(Tout)
+Z=Tout[0].item()
+print("(TRG) Z={}".format(Z))
+print(-np.log(Z)/4)
 # exit()
 
 
-# def TTTT_2_Z(T):
-#     # print("(TRG) Contraction of a 2x2 block")
-#     # print("(TRG) Puting T")
-#     net = cytnx.Network()
-#     net.FromString(["A1: A2_x_o-A1_x_i, A3_y_o-A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
-#                     "A2: A1_x_o-A2_x_i, A4_y_o-A2_y_i, A2_x_o-A1_x_i, A2_y_o-A4_y_i", \
-#                     "A3: A4_x_o-A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o-A1_y_i", \
-#                     "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o-A3_x_i, A4_y_o-A2_y_i", \
-#                     "TOUT: "])
-#     # print(net)
-#     net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
-#     net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
-#     net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
-#     net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
-#     # print(net)
-#     Tout = net.Launch()
-#     # Tout1.print_diagram()
-#     # print(Tout1)
-#     return Tout
-
-# Tout = TTTT_2_Z(T)
-# Tout.print_diagram()
+# print("(TRG) Puting T_arrow")
+# Tout = TTTT_2_Z_net(T_arrow)
+# # Tout.print_diagram()
 # print(Tout)
-# exit()
-# print("(TRG) Contraction of a 2x2 block")
-# print("(TRG) Puting T")
-# net = cytnx.Network()
-# net.FromString(["A1: A2_x_o-A1_x_i, A3_y_o-A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
-#                 "A2: A1_x_o-A2_x_i, A4_y_o-A2_y_i, A2_x_o-A1_x_i, A2_y_o-A4_y_i", \
-#                 "A3: A4_x_o-A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o-A1_y_i", \
-#                 "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o-A3_x_i, A4_y_o-A2_y_i", \
-#                 "TOUT: "])
-# # print(net)
-# net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
-# net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
-# net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
-# net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
-# # print(net)
-# Tout1 = net.Launch()
-# # Tout1.print_diagram()
-# print(Tout1)
-# # exit()
 
-print("(TRG) Puting T_arrow")
-Tout = TTTT_2_Z_net(T_arrow)
-# Tout.print_diagram()
-print(Tout)
-
-# net = cytnx.Network()
-# net.FromString(["A1: A2_x_o-A1_x_i, A3_y_o-A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
-#                 "A2: A1_x_o-A2_x_i, A4_y_o-A2_y_i, A2_x_o-A1_x_i, A2_y_o-A4_y_i", \
-#                 "A3: A4_x_o-A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o-A1_y_i", \
-#                 "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o-A3_x_i, A4_y_o-A2_y_i", \
-#                 "TOUT: "])
-# # print(net)
-# net.PutUniTensor("A1", T_arrow, ["x_i","y_i","x_o","y_o"])
-# net.PutUniTensor("A2", T_arrow, ["x_i","y_i","x_o","y_o"])
-# net.PutUniTensor("A3", T_arrow, ["x_i","y_i","x_o","y_o"])
-# net.PutUniTensor("A4", T_arrow, ["x_i","y_i","x_o","y_o"])
-# # print(net)
-# Tout1 = net.Launch()
-# # Tout1.print_diagram()
-# print(Tout1)
 
 # exit()
 
@@ -284,24 +237,31 @@ TM = TM.permute(["T1_x_i","T2_x_i","T1_x_o","T2_x_o"]).set_rowrank(2).set_name("
 TM.print_diagram()
 # print(TM)
 # matrix_view(TM, 2)
+print(">"*80)
+print(">>>>>> Check eigenvalues of Transfer Matrix, L>=2")
+print(">"*80)
+
+print(">>>>> (TRG) from TRG")
 exp_Ei, eigenvectors = cytnx.linalg.Eigh(TM)
 exp_Ei = exp_Ei.get_block().numpy()[::-1]
 Ei = -np.log(exp_Ei)
 # print(exp_Ei)
-print(Ei)
+L = 2
+print("L={}".format(L),Ei)
 
 
-# exit()
+print(">>>>> (TRG) from exact solution")
 from Exact_Ising import *
 num_collect = 4
 L = 2
 res = Ei_kmax(L, temp, num_collect)
-print(res)
+print("L={}".format(L),res)
 # print(np.exp(-res))
 
-
-exit()
-
+# exit()
+print(">"*80)
+print(">>>>>> TTTT --> T")
+print(">"*80)
 
 # TTTT --> T
 diag="""
@@ -323,52 +283,42 @@ diag="""
 """
 print(diag)
 
-def TTTT_2_T(T):
-    net = cytnx.Network()
-    net.FromString(["A1: A1_x_i, A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
-                    "A2: A1_x_o-A2_x_i, A2_y_i, A2_x_o, A2_y_o-A4_y_i", \
-                    "A3: A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o", \
-                    "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o, A4_y_o", \
-                    "TOUT: A1_x_i, A1_y_i, A2_y_i, A3_x_i, A2_x_o, A3_y_o, A4_x_o, A4_y_o"])
-    print(net)
-    net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
+
+print(">"*80)
+print(">>>>>> Checking TM[2,2]")
+print(">"*80)
+
+
+
+def TTTT_2_T_net(T):
+    tensors=[
+        ("A1",["x_i","y_i","x_o","y_o"]),
+        ("A2",["x_i","y_i","x_o","y_o"]),
+        ("A3",["x_i","y_i","x_o","y_o"]),
+        ("A4",["x_i","y_i","x_o","y_o"]),
+    ]
+
+    contractions=[
+        ("A1","x_o","A2","x_i"),("A3","x_o","A4","x_i"),("A1","y_o","A3","y_i"),("A2","y_o","A4","y_i"),
+    ]
+
+    net = conc(tensors=tensors, contractions=contractions)
     net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
     net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
     net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
     net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
     print(net)
-    Tout = net.Launch().set_name("TTTT")
-    # Tout.print_diagram()
+    Tout = net.Launch()
+    # Tout1.print_diagram()
+    # print(Tout1)
     return Tout
 
-
-Tout = TTTT_2_T(T)
+Tout = TTTT_2_T_net(T)
 Tout.print_diagram()
-# print(Tout)
-# exit()
-print("(TRG) Contraction of a 2x2 block")
-print("(TRG) Puting T")
-net = cytnx.Network()
-net.FromString(["A1: A1_x_i, A1_y_i, A1_x_o-A2_x_i, A1_y_o-A3_y_i", \
-                "A2: A1_x_o-A2_x_i, A2_y_i, A2_x_o, A2_y_o-A4_y_i", \
-                "A3: A3_x_i, A1_y_o-A3_y_i, A3_x_o-A4_x_i, A3_y_o", \
-                "A4: A3_x_o-A4_x_i, A2_y_o-A4_y_i, A4_x_o, A4_y_o", \
-                "TOUT: A1_x_i, A1_y_i, A2_y_i, A3_x_i, A2_x_o, A3_y_o, A4_x_o, A4_y_o"])
-print(net)
-net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A1", T, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A2", T, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A3", T, ["x_i","y_i","x_o","y_o"])
-net.PutUniTensor("A4", T, ["x_i","y_i","x_o","y_o"])
-print(net)
-Tout1 = net.Launch().set_name("TTTT")
-Tout1.print_diagram()
 
-exit()
 
-TM = Tout1.Trace("A1_y_i","A3_y_o").Trace("A2_y_i","A4_y_o").set_name("TM")
+TM = Tout.Trace("A1_y_i","A3_y_o").Trace("A2_y_i","A4_y_o").set_name("TM[2,2]")
 TM.print_diagram()
-
 
 matrix_view(TM, 2)
 exp_Ei, eigenvectors = cytnx.linalg.Eigh(TM)
@@ -379,9 +329,12 @@ print(Ei/2)
 
 # exit()
 
-
 # SVD
-print("#"*80, "\n(TRG) SVD")
+print(">"*80)
+print(">>>>>> (TRG) SVD")
+print(">"*80)
+
+# print("#"*80, "\n(TRG) SVD")
 # ·······y_i·················y_i·································y_i··············
 # ········│···················│···································│···············
 # ········▼···················▼···································▼···············
@@ -411,18 +364,28 @@ def TRG_split(Tin, Tout1_label, Tout2_label, aux_label):
         print("ERR: Rank!=4")
     T = Tin.permute(Tout1_label+Tout2_label).set_rowrank_(2) 
     T.set_rowrank_(2)    
+    print(T.get_block().numpy().shape)
+    print(T.get_block().numpy())
+    u, s, vt = spl.svd(T.get_block().numpy().reshape(4,4))
+    print(s)
+    # exit()
     # T.print_diagram()
     S , U , Vdag = cytnx.linalg.Svd(T)
+    print("S=",S)
     S_sqrt = cytnx.linalg.Pow(S,0.5).set_name("S_sqrt")
+    print(S_sqrt.get_block().numpy().shape)
+    print(S_sqrt.get_block().numpy())
+    exit()
     Tout1 = cytnx.Contract(U, S_sqrt).relabel(Tout1_label+aux_label)
     Tout2 = cytnx.Contract(S_sqrt, Vdag).relabel(aux_label+Tout2_label)
+    print(Tout1.get_block().numpy().shape)
+    print(Tout1.get_block().numpy())
+    print(Tout2.get_block().numpy().shape)
+    print(Tout2.get_block().numpy())
+    # exit()
 
     return Tout1, Tout2
 
-TA = T.clone().set_name("TA")
-TB = T.clone().set_name("TB")
-TC = T.clone().set_name("TC")
-TD = T.clone().set_name("TD")
 
 # For a block
 # AB
@@ -451,25 +414,7 @@ TD = T.clone().set_name("TD")
 # ··········🄲·🄳··············🄲·🄳·············🄲·🄳·············🄲·🄳·············
 # ··········🄰·🄱··············🄰·🄱·············🄰·🄱·············🄰·🄱·············
 
-# TA, TD ==> DL, UR, [x_i,y_o], [x_o, y_i] 
-TA_DL, TA_UR =TRG_split(TA, ['x_i', 'y_o'], ['x_o', 'y_i'], ["aux_A"])
-TA_DL.set_name("TA_DL").print_diagram()
-TA_UR.set_name("TA_UR").print_diagram()
 
-TD_DL, TD_UR =TRG_split(TD, ['x_i', 'y_o'], ['x_o', 'y_i'], ["aux_D"])
-TD_DL.set_name("TD_DL").print_diagram()
-TD_UR.set_name("TD_UR").print_diagram()
-
-# TB, TC ==> UL, DR, [x_i,y_i], [x_o,y_o] 
-TB_UL, TB_DR =TRG_split(TB, ['x_i', 'y_i'], ['x_o', 'y_o'], ["aux_B"])
-TB_UL.set_name("TB_UL").print_diagram()
-TB_DR.set_name("TB_DR").print_diagram()
-
-TC_UL, TC_DR =TRG_split(TC, ['x_i', 'y_i'], ['x_o', 'y_o'], ["aux_C"])
-TC_UL.set_name("TC_UL").print_diagram()
-TC_DR.set_name("TC_DR").print_diagram()
-
-# exit()
 
 # ··········DR_i························DL_o······································
 # ·············╲························╱·········································
@@ -486,82 +431,31 @@ TC_DR.set_name("TC_DR").print_diagram()
 # ·············╱························╲·········································
 # ···········UR_i······················UL_o·······································
 
-print("(TRG) Constrauct T_CDAB from TC_DR, TD_DL, TA_UR, TB_UL")
-# Constrauct T_CDAB from TC_DR, TD_DL, TA_UR, TB_UL
-TC_DR.print_diagram()
-TD_DL.print_diagram()
-TA_UR.print_diagram()
-TB_UL.print_diagram()
-
-
-net = cytnx.Network()
-net.FromString(["DR: DR_i, DR_x_o-DL_x_i, DR_y_o-UR_y_i", \
-                "DL: DL_o, DR_x_o-DL_x_i, DL_y_o-UL_y_i", \
-                "UR: UR_i, UR_x_o-UL_x_i, DR_y_o-UR_y_i", \
-                "UL: UL_o, UR_x_o-UL_x_i, DL_y_o-UL_y_i", \
-                "TOUT: DR_i, UR_i, DL_o, UL_o"])
-print(net)
-net.PutUniTensor("DR", TC_DR, ["aux_C","x_o","y_o"])
-net.PutUniTensor("DL", TD_DL, ["aux_D","x_i","y_o"])
-net.PutUniTensor("UR", TA_UR, ["aux_A","x_o","y_i"])
-net.PutUniTensor("UL", TB_UL, ["aux_B","x_i","y_i"])
-print(net)
-T_CDAB = net.Launch().set_name("T_CDAB")
-T_CDAB.print_diagram()
-
-
-net = cytnx.Network()
-net.FromString(["DR: DR_i, DR_x_o-DL_x_i, DR_y_o-UR_y_i", \
-                "DL: DL_o, DR_x_o-DL_x_i, DL_y_o-UL_y_i", \
-                "UR: UR_i, UR_x_o-UL_x_i, DR_y_o-UR_y_i", \
-                "UL: UL_o, UR_x_o-UL_x_i, DL_y_o-UL_y_i", \
-                "TOUT: DR_i, UR_i, DL_o, UL_o"])
-print(net)
-
-print("(TRG) Constrauct T_BADC from TB_DR, TA_DL, TD_UR, TC_UL")
-# Constrauct T_BADC from TB_DR, TA_DL, TD_UR, TC_UL
-TB_DR.print_diagram()
-TA_DL.print_diagram()
-TD_UR.print_diagram()
-TC_UL.print_diagram()
-net.PutUniTensor("DR", TB_DR, ["aux_B","x_o","y_o"])
-net.PutUniTensor("DL", TA_DL, ["aux_A","x_i","y_o"])
-net.PutUniTensor("UR", TD_UR, ["aux_D","x_o","y_i"])
-net.PutUniTensor("UL", TC_UL, ["aux_C","x_i","y_i"])
-print(net)
-T_BADC = net.Launch().set_name("T_BADC")
-T_BADC.print_diagram()
-
-matrix_view(T_CDAB, 2)
-
-matrix_view(T_BADC, 2)
-
-TT = T_CDAB.get_block().numpy()
-print(TT.shape)
-TT = TT.reshape(16,16)
-print(TT.shape)
-with np.printoptions(precision=2, linewidth=200):
-    print(TT)
-
 def TRG_half(TA, TB, TC, TD):
     # TA, TD ==> DL, UR, [x_i,y_o], [x_o, y_i] 
+    print(">>>>> TRG half")
     TA_DL, TA_UR =TRG_split(TA, ['x_i', 'y_o'], ['x_o', 'y_i'], ["aux_A"])
-    TA_DL.set_name("TA_DL").print_diagram()
-    TA_UR.set_name("TA_UR").print_diagram()
+    TA_DL.set_name("TA_DL").print_diagram() # c3
+    # print(TA_DL)
+    TA_UR.set_name("TA_UR").print_diagram() # c1
+    # print(TA_UR.get_block().numpy())
 
     TD_DL, TD_UR =TRG_split(TD, ['x_i', 'y_o'], ['x_o', 'y_i'], ["aux_D"])
-    TD_DL.set_name("TD_DL").print_diagram()
-    TD_UR.set_name("TD_UR").print_diagram()
+    TD_DL.set_name("TD_DL") #.print_diagram()
+    TD_UR.set_name("TD_UR") #.print_diagram()
 
     # TB, TC ==> UL, DR, [x_i,y_i], [x_o,y_o] 
     TB_UL, TB_DR =TRG_split(TB, ['x_i', 'y_i'], ['x_o', 'y_o'], ["aux_B"])
-    TB_UL.set_name("TB_UL").print_diagram()
-    TB_DR.set_name("TB_DR").print_diagram()
-
+    TB_UL.set_name("TB_UL") #.print_diagram()
+    TB_DR.set_name("TB_DR") #.print_diagram()
+    print(TB_DR.get_block().numpy().shape)
+    print(TB_DR.get_block().numpy())
+    print(TB_UL.get_block().numpy().shape)
     TC_UL, TC_DR =TRG_split(TC, ['x_i', 'y_i'], ['x_o', 'y_o'], ["aux_C"])
-    TC_UL.set_name("TC_UL").print_diagram()
-    TC_DR.set_name("TC_DR").print_diagram()
+    TC_UL.set_name("TC_UL") #.print_diagram()
+    TC_DR.set_name("TC_DR") #.print_diagram()
 
+    # exit()
     # Constrauct T_BADC from TB_DR, TA_DL, TD_UR, TC_UL
     net = cytnx.Network()
     net.FromString(["DR: DR_i, DR_x_o-DL_x_i, DR_y_o-UR_y_i", \
@@ -573,8 +467,22 @@ def TRG_half(TA, TB, TC, TD):
     net.PutUniTensor("DL", TD_DL, ["aux_D","x_i","y_o"])
     net.PutUniTensor("UR", TA_UR, ["aux_A","x_o","y_i"])
     net.PutUniTensor("UL", TB_UL, ["aux_B","x_i","y_i"])
-    T_CDAB = net.Launch().set_name("T_CDAB")
+    T_CDAB = net.Launch().set_name("T_CDAB").relabel(["x_i","y_i","x_o","y_o"])
+    T_CDAB.permute_(["y_i","x_i","y_o","x_o"])
     T_CDAB.print_diagram()
+    print(T_CDAB.Trace_("x_i","x_o").Trace_("y_i","y_o"))
+    with np.printoptions(precision=2):
+        print(T_CDAB.get_block().numpy().shape)
+        print(T_CDAB.get_block().numpy())
+
+
+    print("(TRG) Testing trace")
+    trT = T_CDAB.clone().Trace_("x_i","x_o").Trace_("y_i","y_o").set_name("trT")
+    trT.print_diagram()
+    trT = trT[0].item()
+    print("(TRG) trT={}".format(trT))
+
+    exit()
 
     # Constrauct T_BADC from TB_DR, TA_DL, TD_UR, TC_UL
     net = cytnx.Network()
@@ -587,16 +495,41 @@ def TRG_half(TA, TB, TC, TD):
     net.PutUniTensor("DL", TA_DL, ["aux_A","x_i","y_o"])
     net.PutUniTensor("UR", TD_UR, ["aux_D","x_o","y_i"])
     net.PutUniTensor("UL", TC_UL, ["aux_C","x_i","y_i"])
-    T_BADC = net.Launch().set_name("T_BADC")
-    T_BADC.print_diagram()
+    T_BADC = net.Launch().set_name("T_BADC").relabel(["x_i","y_i","x_o","y_o"])
+    # T_BADC.print_diagram()
+
 
     return T_CDAB, T_BADC
+
+
+TA = T.clone().set_name("TA")
+TB = T.clone().set_name("TB")
+TC = T.clone().set_name("TC")
+TD = T.clone().set_name("TD")
+
 
 T_CDAB, T_BADC = TRG_half(TA, TB, TC, TD)
 T_CDAB.print_diagram()
 T_BADC.print_diagram()
 matrix_view(T_CDAB, 2)
 matrix_view(T_BADC, 2)
+
+print("(TRG) Testing trace")
+trT = T_CDAB.clone().Trace_("x_i","x_o").Trace_("y_i","y_o").set_name("trT")
+trT.print_diagram()
+trT = trT[0].item()
+print("(TRG) trT={}".format(trT))
+
+trT = T_BADC.clone().Trace_("x_i","x_o").Trace_("y_i","y_o").set_name("trT")
+trT.print_diagram()
+trT = trT[0].item()
+print("(TRG) trT={}".format(trT))
+
+
+Z=trT
+print("(TRG) Z={}".format(Z))
+print(-np.log(Z)/2)
+
 exit()
 
 # TB_ULDR = cytnx.Contract(TB_UL, TB_DR).relabel(TB.labels())
