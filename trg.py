@@ -1,23 +1,8 @@
 import cytnx
 import numpy as np
 import itertools
-
-from math import sqrt, log, cos, cosh, sinh, tanh, isnan, isinf, pi
-import scipy.integrate as integrate
 import time
-
-
-def exact_free_energy(temp: float) -> float:
-    beta = 1.0 / temp
-    cc, ss = cosh(2.0 * beta), sinh(2.0 * beta)
-    k = 2.0 * ss / cc**2
-
-    def integrant(x):
-        return log(1.0 + sqrt(abs(1.0 - k * k * cos(x) ** 2)))
-
-    integral, _ = integrate.quad(integrant, 0, 0.5 * pi, epsabs=1e-13, epsrel=1e-13)
-    result = integral / pi + log(cc) + 0.5 * log(2.0)
-    return -result / beta
+from exact_free_energy import free_energy_per_site
 
 def initial_TN(temp: float):
     M = np.array([[+np.sqrt(np.cosh(+1/temp)), +np.sqrt(np.sinh(+1/temp))],
@@ -27,7 +12,6 @@ def initial_TN(temp: float):
     for u,r,d,l in itertools.product([0, 1], repeat=4):
         T.at(["u","r","d","l"], [u,r,d,l]).value = M[0,u]*M[0,r]*M[0,d]*M[0,l] + M[1,u]*M[1,r]*M[1,d]*M[1,l]
     # T.print_diagram()
-    # print("T-a=\n",T.get_block().numpy()-a)
     trT = T.Trace("u","d").Trace("r","l").item()
     T /= trT
     log_factor = np.log(trT)
@@ -35,16 +19,10 @@ def initial_TN(temp: float):
 
     return (T, log_factor, n_spin)
 
-
 class TRG:
     def __init__(self, temp: float, chi: int) -> None:
-        self.method = "TRG"
         self.temp = temp
         self.chi = chi
-        # self.f_exact = ising.exact_free_energy(temp)
-        self.f_exact = exact_free_energy(temp)
-
-        # a, log_factor, n_spin = common.initial_TN(self.temp)
         a, log_factor, n_spin = initial_TN(self.temp)
         self.A = a
         self.log_factors = [log_factor]
@@ -118,35 +96,31 @@ class TRG:
         self.step += 1
 
     def run(self, step: int) -> None:
-        # self.print_preamble()
-        # self.print_legend()
-        # self.print_results()
-        exact = exact_free_energy(self.temp)
+        exact = free_energy_per_site(self.temp)
+
         time_start = time.perf_counter()
         f = -np.sum(np.array(self.log_factors) / np.array(self.n_spins)) * self.temp
         f_err = (f - exact) / abs(exact)
         print(f"{self.step:04d}", f"{self.n_spins[-1]:6d}", f"{f:.12e}", f"{f_err:.12e}")
-        # print(-np.sum(np.array(self.log_factors) / np.array(self.n_spins)))
         for i in range(step):
             self.update()
             # self.print_results()
             f = -np.sum(np.array(self.log_factors) / np.array(self.n_spins)) * self.temp
             f_err = (f - exact) / abs(exact)
             print(f"{self.step:04d}", f"{self.n_spins[-1]:6d}", f"{f:.12e}", f"{f_err:.12e}")
-            # print(-np.sum(np.array(self.log_factors) / np.array(self.n_spins)))
 
         time_end = time.perf_counter()
         self.print_elapsed_time(time_end - time_start)
 
 
 ########################################################
-# Test
+#  Levin-Nave TRG for 2D Ising model on square lattice
 ########################################################
 Tc = 2/np.log(1+np.sqrt(2))
-temp = Tc-1
-step = 40
+temp = Tc
+step = 20
 
-for chi in [4]:
+for chi in [4,8,16,40]:
     print("temp =", temp, "step =", step, "chi =", chi)
     TRG(temp, chi).run(step)
 
