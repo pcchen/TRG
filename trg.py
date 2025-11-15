@@ -19,20 +19,7 @@ def exact_free_energy(temp: float) -> float:
     result = integral / pi + log(cc) + 0.5 * log(2.0)
     return -result / beta
 
-def initial_TN(temp: float) -> tuple[np.ndarray, float, float]:
-    # shape = (2, 2, 2, 2)
-    # a = np.zeros(shape, dtype=float)  # [top, right, bottom, left]
-    # c = np.cosh(1.0 / temp)
-    # s = np.sinh(1.0 / temp)
-    # for idx in np.ndindex(shape):
-    #     if sum(idx) == 0:
-    #         a[idx] = 2 * c * c
-    #     elif sum(idx) == 2:
-    #         a[idx] = 2 * c * s
-    #     elif sum(idx) == 4:
-    #         a[idx] = 2 * s * s
-    # print(a)
-
+def initial_TN(temp: float):
     M = np.array([[+np.sqrt(np.cosh(+1/temp)), +np.sqrt(np.sinh(+1/temp))],
                 [+np.sqrt(np.cosh(+1/temp)), -np.sqrt(np.sinh(+1/temp))]])
     bd = cytnx.Bond(2)
@@ -45,17 +32,6 @@ def initial_TN(temp: float) -> tuple[np.ndarray, float, float]:
     T /= trT
     log_factor = np.log(trT)
     n_spin = 1
-
-    # # normalize
-    # val = np.einsum("ijij", a)
-    # a /= val
-    # log_factor = np.log(val)
-    # n_spin = 1.0  # An initial tensor has one spin.
-
-    # print("a=\n",a)
-    # print("T=\n",T.get_block().numpy())
-    # print("T-a=\n",T.get_block().numpy()-a)
-    # print(trT, val, trT-val)
 
     return (T, log_factor, n_spin)
 
@@ -78,31 +54,14 @@ class TRG:
     def print_elapsed_time(self, elapsed_time: float) -> None:
         print(f"# Elapsed time: {elapsed_time:.6f} sec")
 
-    def print_results(self) -> None:
-        n_spin = self.n_spins[-1]
-        f = self.free_energy()
-        f_err = (f - self.f_exact) / abs(self.f_exact)
-        results = [f"{self.step:04d}", f"{n_spin:.12e}", f"{f:.12e}", f"{f_err:.12e}"]
-        print(" ".join(results))
-
-    def log_Z(self) -> float:
-        trace_a = self.trace()
-        # if trace_a < 0.0:
-        #     logging.warning("Negative trace_a %e (%d)", trace_a, self.step)
-        log_z = np.sum(np.array(self.log_factors) / np.array(self.n_spins))
-        log_z += np.log(abs(trace_a)) / self.n_spins[-1]
-        return log_z
-
-    def free_energy(self) -> float:
-        return -self.temp * self.log_Z()
-
     def update(self) -> None:
         T = self.A.set_rowrank(2)
 
         T = T.permute(['u','r','d','l'])
         # T.print_diagram()
-        S , U , Vdag = cytnx.linalg.Svd(T)
-        # print("S=\n",S.get_block().numpy())    
+        # S , U , Vdag = cytnx.linalg.Svd(T)
+        S , U , Vdag = cytnx.linalg.Svd_truncate(T, keepdim=self.chi)
+        # print("S=",S.get_block().numpy())    
         # U[:,:,2] *= -1
         # U[:,:,3] *= -1
         # print("U=\n",U.get_block().numpy())    
@@ -118,7 +77,8 @@ class TRG:
 
         T = T.permute(['u','l','r','d'])
         # T.print_diagram()
-        S , U , Vdag = cytnx.linalg.Svd(T)
+        # S , U , Vdag = cytnx.linalg.Svd(T)
+        S , U , Vdag = cytnx.linalg.Svd_truncate(T, keepdim=self.chi)
         # print("S=\n",S.get_block().numpy())
         # print("U=\n",U.get_block().numpy())
         # print("Vdag=\n",Vdag.get_block().numpy())
@@ -161,25 +121,32 @@ class TRG:
         # self.print_preamble()
         # self.print_legend()
         # self.print_results()
-        
+        exact = exact_free_energy(self.temp)
         time_start = time.perf_counter()
-        print(f"{self.step:04d}", f"{self.n_spins[-1]:.12e}", -np.sum(np.array(self.log_factors) / np.array(self.n_spins)))
+        f = -np.sum(np.array(self.log_factors) / np.array(self.n_spins)) * self.temp
+        f_err = (f - exact) / abs(exact)
+        print(f"{self.step:04d}", f"{self.n_spins[-1]:6d}", f"{f:.12e}", f"{f_err:.12e}")
         # print(-np.sum(np.array(self.log_factors) / np.array(self.n_spins)))
         for i in range(step):
             self.update()
             # self.print_results()
-            print(f"{self.step:04d}", f"{self.n_spins[-1]:.12e}", -np.sum(np.array(self.log_factors) / np.array(self.n_spins)))
+            f = -np.sum(np.array(self.log_factors) / np.array(self.n_spins)) * self.temp
+            f_err = (f - exact) / abs(exact)
+            print(f"{self.step:04d}", f"{self.n_spins[-1]:6d}", f"{f:.12e}", f"{f_err:.12e}")
             # print(-np.sum(np.array(self.log_factors) / np.array(self.n_spins)))
-        time_end = time.perf_counter()
 
+        time_end = time.perf_counter()
         self.print_elapsed_time(time_end - time_start)
 
 
 ########################################################
 # Test
 ########################################################
-temp = 1
-chi = 4
-step = 2
+Tc = 2/np.log(1+np.sqrt(2))
+temp = Tc-1
+step = 40
 
-TRG(temp, chi).run(step)
+for chi in [4]:
+    print("temp =", temp, "step =", step, "chi =", chi)
+    TRG(temp, chi).run(step)
+
