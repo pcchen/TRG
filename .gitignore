@@ -1,0 +1,12 @@
+# uv / virtualenv
+.venv/
+uv.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
