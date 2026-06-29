@@ -70,7 +70,7 @@ class TRG:
         from extension import conc
         tensors = [("C0", ["aux","r","d"]), ("C1", ["aux","d","l"]), ("C2", ["u","l","aux"]), ("C3", ["u","r","aux"])]
         contractions = [("C0", "r", "C1", "l"),("C1","d","C2","u"),("C2","l","C3","r"),("C3","u","C0","d")]
-        net = conc(tensors, contractions)
+        net, net_string = conc(tensors, contractions)
         # print(net)
         net.PutUniTensor("C0", C0, ["_aux_L","r","d"])
         net.PutUniTensor("C1", C1, ["_aux_L","d","l"])

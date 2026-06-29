@@ -72,5 +72,5 @@ def conc(tensors, contractions):
     net=cytnx.Network()
     net.FromString(net_string)
 
-    return net
+    return net, net_string
 
